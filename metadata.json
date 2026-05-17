@@ -1,0 +1,8 @@
+{
+  "name": "Study Planner",
+  "description": "A modern and professional productivity platform for students to manage tasks, goals, and track progress with analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

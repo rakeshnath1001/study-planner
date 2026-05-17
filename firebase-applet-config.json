@@ -1,0 +1,10 @@
+{
+  "projectId": "${FIREBASE_PROJECTID}",
+  "appId": "${FIREBASE_APPID}",
+  "apiKey": "${FIREBASE_APIKEY}",
+  "authDomain": "${FIREBASE_AUTHDOMAIN}",
+  "firestoreDatabaseId": "${FIRESTORE_DATABASEID}",
+  "storageBucket": "${FIREBASE_STORAGEBUCKET}",
+  "messagingSenderId": "${FIREBASE_MESSAGINGSENDERID}",
+  "measurementId": "${FIREBASE_MEASUREMENTID}"
+}
