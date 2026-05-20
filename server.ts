@@ -49,7 +49,7 @@ async function startServer() {
       Schema: [{ "date": "YYYY-MM-DD", "title": "Topic Name", "duration": 60 }]`;
 
       const result = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.5-flash",
         contents: prompt,
       });
       

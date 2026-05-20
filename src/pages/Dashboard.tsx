@@ -55,12 +55,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onAddTask, onViewActivity 
     end: endOfMonth(new Date()),
   });
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
-            Good morning, <span className="gradient-text">{profile?.displayName || 'Student'}</span>
+            {greeting}, <span className="gradient-text">{profile?.displayName || 'Student'}</span>
           </h1>
           <p className="mt-1 text-sm text-slate-600">You have {remainingToday.length} tasks remaining for today.</p>
         </div>
