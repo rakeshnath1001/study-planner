@@ -24,7 +24,7 @@ const AppContent: React.FC = () => {
             <Loader2 className="w-10 h-10 text-white animate-spin" />
           </div>
           <div className="text-center">
-            <h2 className="text-xl font-display font-bold italic tracking-tighter uppercase mb-1">INITIALIZING<br /><span className="text-brand-purple">Study Planner</span></h2>
+            <h2 className="text-xl font-bold italic tracking-tighter uppercase mb-1">INITIALIZING<br /><span className="text-brand-purple">Study Planner</span></h2>
             <p className="text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em]">Syncing with global clusters...</p>
           </div>
         </div>
@@ -43,13 +43,13 @@ const AppContent: React.FC = () => {
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'dashboard': return <Dashboard onAddTask={() => setCurrentPage('activity')} />;
+      case 'dashboard': return <Dashboard onAddTask={() => setCurrentPage('activity')} onViewActivity={() => setCurrentPage('activity')} />;
       case 'activity': return <Activity onGoalClick={handleGoalClick} />;
       case 'productivity': return <Productivity />;
       case 'calendar': return <Calendar />;
       case 'profile': return <Profile />;
       case 'goal-detail': return <GoalDetail goalId={selectedGoalId!} onBack={() => setCurrentPage('activity')} />;
-      default: return <Dashboard onAddTask={() => setCurrentPage('activity')} />;
+      default: return <Dashboard onAddTask={() => setCurrentPage('activity')} onViewActivity={() => setCurrentPage('activity')} />;
     }
   };
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, ArrowRight, Zap, Target, BarChart2 } from 'lucide-react';
+import { Sparkles, ArrowRight, Target, BarChart2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../lib/contexts';
 import { Button } from '../components/ui/Base';
 
@@ -92,7 +92,7 @@ export const LoginPage: React.FC = () => {
               ].map((task, i) => (
                 <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${task.c ? 'bg-white/40 border-slate-200' : 'bg-white/80 border-slate-200 hover:border-indigo-300'}`}>
                   <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${task.c ? 'bg-indigo-500 border-indigo-500' : 'border-slate-300 bg-white'}`}>
-                    {task.c && <span className="text-xs text-white">✓</span>}
+                    {task.c && <CheckCircle2 className="h-4 w-4 text-white" />}
                   </div>
                   <span className={`text-sm font-medium ${task.c ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{task.t}</span>
                 </div>

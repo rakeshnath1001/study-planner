@@ -1,18 +1,17 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { 
-  ArrowLeft, 
-  Target, 
-  Calendar, 
-  CheckCircle2, 
-  Circle, 
+import {
+  AlertCircle,
+  ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  Circle,
   Clock,
+  Target,
   TrendingUp,
-  AlertCircle
 } from 'lucide-react';
 import { useStudy } from '../lib/contexts';
 import { Button } from '../components/ui/Base';
-import { format } from 'date-fns';
 
 interface GoalDetailProps {
   goalId: string;
@@ -21,165 +20,158 @@ interface GoalDetailProps {
 
 export const GoalDetail: React.FC<GoalDetailProps> = ({ goalId, onBack }) => {
   const { goals, tasks, updateTask } = useStudy();
-  
-  const goal = goals.find(g => g.id === goalId);
-  const goalTasks = tasks.filter(t => t.goalId === goalId);
-  
+
+  const goal = goals.find(item => item.id === goalId);
+  const goalTasks = tasks
+    .filter(task => task.goalId === goalId)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
   if (!goal) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-        <AlertCircle className="w-12 h-12 mb-4 opacity-20" />
-        <p className="font-bold uppercase tracking-widest text-xs">Goal not found.</p>
+        <AlertCircle className="mb-4 h-12 w-12 opacity-20" />
+        <p className="text-xs font-bold uppercase tracking-widest">Goal not found.</p>
         <Button variant="secondary" onClick={onBack} className="mt-6">Go Back</Button>
       </div>
     );
   }
 
-  const completedTasks = goalTasks.filter(t => t.status === 'completed');
-  const progress = goalTasks.length > 0 
-    ? Math.round((completedTasks.length / goalTasks.length) * 100) 
-    : 0;
+  const completedTasks = goalTasks.filter(task => task.status === 'completed');
+  const progress = goalTasks.length > 0 ? Math.round((completedTasks.length / goalTasks.length) * 100) : 0;
 
   return (
     <div className="space-y-8">
-      <button 
+      <button
         onClick={onBack}
-        className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors group"
+        className="group flex items-center gap-2 text-slate-500 transition-colors hover:text-slate-900"
       >
-        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-        <span className="text-xs font-bold uppercase tracking-widest">Back to Studio</span>
+        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+        <span className="text-xs font-bold uppercase tracking-widest">Back to Goals</span>
       </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Goal Overview */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="glass-card p-10 border border-slate-200 relative overflow-hidden bg-white/60 shadow-sm">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[100px] -z-10" />
-            
-            <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
-              <div className="w-24 h-24 rounded-[32px] bg-gradient-to-tr from-indigo-50 to-purple-50 border border-slate-200 flex items-center justify-center text-indigo-500 shadow-sm">
-                <Target className="w-10 h-10" />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 xl:gap-8">
+        <div className="space-y-6 xl:col-span-2">
+          <div className="glass-card relative overflow-hidden border border-slate-200 bg-white/60 p-5 shadow-sm sm:p-8 lg:p-10">
+            <div className="absolute right-0 top-0 -z-10 h-64 w-64 bg-indigo-500/5 blur-[100px]" />
+
+            <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:gap-8">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[28px] border border-slate-200 bg-gradient-to-tr from-indigo-50 to-purple-50 text-indigo-500 shadow-sm sm:h-24 sm:w-24 sm:rounded-[32px]">
+                <Target className="h-10 w-10" />
               </div>
-              <div className="flex-1 space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">{goal.title}</h1>
-                <p className="text-slate-600 leading-relaxed">{goal.description || 'No description provided.'}</p>
+              <div className="min-w-0 flex-1 space-y-2">
+                <h1 className="break-words text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{goal.title}</h1>
+                <p className="leading-relaxed text-slate-600">{goal.description || 'No description provided.'}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
-              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Duration</p>
-                <div className="flex items-center gap-2 text-slate-900 font-bold">
-                  <Calendar className="w-4 h-4 text-indigo-500" />
+            <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3 lg:mt-10 lg:gap-6">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Duration</p>
+                <div className="flex items-center gap-2 font-bold text-slate-900">
+                  <Calendar className="h-4 w-4 shrink-0 text-indigo-500" />
                   <span className="text-sm">{goal.startDate} - {goal.endDate}</span>
                 </div>
               </div>
-              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Status</p>
-                <div className="flex items-center gap-2 text-slate-900 font-bold">
-                  <div className={`w-2 h-2 rounded-full ${goal.status === 'active' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Status</p>
+                <div className="flex items-center gap-2 font-bold text-slate-900">
+                  <div className={`h-2 w-2 rounded-full ${goal.status === 'active' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
                   <span className="text-sm capitalize">{goal.status}</span>
                 </div>
               </div>
-              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Tasks</p>
-                <div className="flex items-center gap-2 text-slate-900 font-bold">
-                  <CheckCircle2 className="w-4 h-4 text-purple-500" />
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Tasks</p>
+                <div className="flex items-center gap-2 font-bold text-slate-900">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-purple-500" />
                   <span className="text-sm">{completedTasks.length} / {goalTasks.length} Done</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="glass-card p-10 border border-slate-200 bg-white/60 shadow-sm">
-            <h2 className="text-xl font-bold mb-8 flex items-center gap-2 text-slate-900">
-              <TrendingUp className="w-5 h-5 text-indigo-500" />
+          <div className="glass-card border border-slate-200 bg-white/60 p-5 shadow-sm sm:p-8 lg:p-10">
+            <h2 className="mb-8 flex items-center gap-2 text-xl font-bold text-slate-900">
+              <TrendingUp className="h-5 w-5 text-indigo-500" />
               Evolution Timeline
             </h2>
             <div className="space-y-4">
               {goalTasks.length > 0 ? (
-                goalTasks.map((task, i) => (
-                  <motion.div 
+                goalTasks.map((task, index) => (
+                  <motion.div
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    key={task.id} 
-                    className="p-4 rounded-2xl bg-white border border-slate-200 flex items-center gap-4 hover:border-indigo-300 transition-all group shadow-sm"
+                    transition={{ delay: index * 0.05 }}
+                    key={task.id}
+                    className="group flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-indigo-300 sm:flex-row sm:items-center"
                   >
-                    <button 
+                    <button
                       onClick={() => updateTask(task.id, { status: task.status === 'completed' ? 'pending' : 'completed' })}
-                      className={`w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all ${task.status === 'completed' ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300 bg-white text-slate-300 hover:text-indigo-400 hover:border-indigo-400 shadow-inner'}`}
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border-2 transition-all ${task.status === 'completed' ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-slate-300 bg-white text-slate-300 shadow-inner hover:border-indigo-400 hover:text-indigo-400'}`}
+                      aria-label={task.status === 'completed' ? 'Mark task pending' : 'Mark task complete'}
                     >
-                      {task.status === 'completed' ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
+                      {task.status === 'completed' ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
                     </button>
-                    <div className="flex-1">
-                      <h3 className={`text-sm font-bold ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{task.title}</h3>
-                      <div className="flex gap-4 mt-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                          <Calendar className="w-3 h-3" /> {task.date}
+                    <div className="min-w-0 flex-1">
+                      <h3 className={`break-words text-sm font-bold ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{task.title}</h3>
+                      <div className="mt-1 flex flex-wrap gap-3 sm:gap-4">
+                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          <Calendar className="h-3 w-3" /> {task.date}
                         </span>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {task.duration}m
+                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          <Clock className="h-3 w-3" /> {task.duration}m
                         </span>
                       </div>
                     </div>
                   </motion.div>
                 ))
               ) : (
-                <p className="text-center py-10 text-slate-500 italic text-sm">No specific tasks linked to this goal yet.</p>
+                <p className="py-10 text-center text-sm italic text-slate-500">No specific tasks linked to this goal yet.</p>
               )}
             </div>
           </div>
         </div>
 
-        {/* Sidebar Analytics */}
-        <div className="space-y-8">
-          <div className="glass-card p-10 border border-slate-200 bg-white/60 shadow-sm">
-             <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-slate-500 mb-6">Current Evolution</h3>
-             <div className="relative w-full aspect-square flex items-center justify-center">
-                <svg className="w-full h-full -rotate-90">
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="45%"
-                    className="stroke-slate-200 fill-none"
-                    strokeWidth="8"
-                  />
-                  <motion.circle
-                    cx="50%"
-                    cy="50%"
-                    r="45%"
-                    className="stroke-indigo-500 fill-none"
-                    strokeWidth="8"
-                    strokeDasharray="282.6"
-                    initial={{ strokeDashoffset: 282.6 }}
-                    animate={{ strokeDashoffset: 282.6 - (282.6 * progress) / 100 }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-4xl font-bold tracking-tighter text-slate-900">{progress}%</span>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Complete</span>
-                </div>
-             </div>
-             
-             <div className="mt-10 space-y-4">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-slate-500 font-bold uppercase tracking-wider">Completion Velocity</span>
-                  <span className="text-emerald-500 font-bold">+12%</span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                  <div className="h-full w-[65%] bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                </div>
-             </div>
+        <div className="space-y-6 xl:space-y-8">
+          <div className="glass-card border border-slate-200 bg-white/60 p-6 shadow-sm sm:p-8 lg:p-10">
+            <h3 className="mb-6 text-sm font-bold uppercase tracking-[0.2em] text-slate-500">Current Evolution</h3>
+            <div className="relative flex aspect-square w-full items-center justify-center">
+              <svg className="h-full w-full -rotate-90">
+                <circle cx="50%" cy="50%" r="45%" className="fill-none stroke-slate-200" strokeWidth="8" />
+                <motion.circle
+                  cx="50%"
+                  cy="50%"
+                  r="45%"
+                  className="fill-none stroke-indigo-500"
+                  strokeWidth="8"
+                  strokeDasharray="282.6"
+                  initial={{ strokeDashoffset: 282.6 }}
+                  animate={{ strokeDashoffset: 282.6 - (282.6 * progress) / 100 }}
+                  transition={{ duration: 1.5, ease: 'easeOut' }}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-4xl font-bold tracking-tight text-slate-900">{progress}%</span>
+                <span className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Complete</span>
+              </div>
+            </div>
+
+            <div className="mt-8 space-y-4 lg:mt-10">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold uppercase tracking-wider text-slate-500">Task Completion</span>
+                <span className="font-bold text-emerald-500">{completedTasks.length}/{goalTasks.length}</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                <div className="h-full rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
           </div>
 
-          <div className="glass-card p-8 bg-indigo-50 border border-indigo-100 shadow-sm">
-             <h4 className="text-sm font-bold text-indigo-900 mb-2">Mentor Quick-Tip</h4>
-             <p className="text-xs text-indigo-700/80 leading-relaxed">
-               Consistency is the architect of mastery. completing even one sub-task today moves the evolution needle forward.
-             </p>
+          <div className="glass-card border border-indigo-100 bg-indigo-50 p-6 shadow-sm sm:p-8">
+            <h4 className="mb-2 text-sm font-bold text-indigo-900">Mentor Quick-Tip</h4>
+            <p className="text-xs leading-relaxed text-indigo-700/80">
+              Consistency is the architect of mastery. Completing even one sub-task today moves the evolution needle forward.
+            </p>
           </div>
         </div>
       </div>

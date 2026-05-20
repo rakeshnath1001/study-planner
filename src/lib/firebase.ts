@@ -1,19 +1,31 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, type FirebaseOptions } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
-const firebaseConfig = {
-  projectId: import.meta.env.VITE_FIREBASE_PROJECTID,
-  appId: import.meta.env.VITE_FIREBASE_APPID,
-  apiKey: import.meta.env.VITE_FIREBASE_APIKEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTHDOMAIN,
-  firestoreDatabaseId: import.meta.env.VITE_FIRESTORE_DATABASEID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGEBUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGINGSENDERID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENTID,
+
+const requiredEnv = (key: keyof ImportMetaEnv) => {
+  const value = import.meta.env[key];
+
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+
+  return value;
+};
+
+const firestoreDatabaseId = requiredEnv('VITE_FIRESTORE_DATABASEID');
+
+const firebaseConfig: FirebaseOptions = {
+  apiKey: requiredEnv('VITE_FIREBASE_APIKEY'),
+  authDomain: requiredEnv('VITE_FIREBASE_AUTHDOMAIN'),
+  projectId: requiredEnv('VITE_FIREBASE_PROJECTID'),
+  storageBucket: requiredEnv('VITE_FIREBASE_STORAGEBUCKET'),
+  messagingSenderId: requiredEnv('VITE_FIREBASE_MESSAGINGSENDERID'),
+  appId: requiredEnv('VITE_FIREBASE_APPID'),
+  measurementId: requiredEnv('VITE_FIREBASE_MEASUREMENTID'),
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); 
+export const db = getFirestore(app, firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 

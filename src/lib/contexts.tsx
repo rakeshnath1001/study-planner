@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, collection, query, where, orderBy, getDocs, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { onAuthStateChanged, User, getRedirectResult } from 'firebase/auth';
+import { doc, getDoc, setDoc, onSnapshot, collection, query, where, orderBy, updateDoc, deleteDoc, addDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { auth, db, signInWithGoogle } from './firebase';
 import { UserProfile, Task, Goal } from '../types';
 import { OperationType, handleFirestoreError } from './errorHandlers';
@@ -23,51 +23,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-        // Fetch or create profile
-        const userRef = doc(db, 'users', user.uid);
-        try {
-          const userDoc = await getDoc(userRef);
-          if (!userDoc.exists()) {
-            const newProfile: UserProfile = {
-              uid: user.uid,
-              email: user.email || '',
-              displayName: user.displayName,
-              photoURL: user.photoURL,
-              productivityScore: 0,
-              totalStudyHours: 0,
-              totalCompletedTasks: 0,
-              streak: 0,
-              lastActiveDate: new Date().toISOString(),
-              updatedAt: serverTimestamp(),
-            };
-            await setDoc(userRef, newProfile);
-            setProfile(newProfile);
-          } else {
-            // Subscribe to profile changes
-            return onSnapshot(userRef, (doc) => {
-              setProfile(doc.data() as UserProfile);
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching profile", error);
-        }
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
+    // Handle redirect results to catch any silent errors after returning from Google
+    getRedirectResult(auth).catch((error) => {
+      console.error("Redirect login error:", error);
+      toast.error(`Login failed: ${error.message}`);
     });
 
-    return unsubscribe;
+    let unsubscribeProfile: (() => void) | undefined;
+    let authRun = 0;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      authRun += 1;
+      const runId = authRun;
+
+      unsubscribeProfile?.();
+      unsubscribeProfile = undefined;
+      setUser(currentUser);
+
+      if (!currentUser) {
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+
+      const userRef = doc(db, 'users', currentUser.uid);
+      try {
+        const userDoc = await getDoc(userRef);
+        if (runId !== authRun) return;
+
+        if (!userDoc.exists()) {
+          const newProfile: UserProfile = {
+            uid: currentUser.uid,
+            email: currentUser.email || '',
+            displayName: currentUser.displayName,
+            photoURL: currentUser.photoURL,
+            productivityScore: 0,
+            totalStudyHours: 0,
+            totalCompletedTasks: 0,
+            streak: 0,
+            lastActiveDate: new Date().toISOString(),
+            updatedAt: serverTimestamp(),
+          };
+          await setDoc(userRef, newProfile);
+          if (runId !== authRun) return;
+        }
+
+        unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
+          setProfile(snapshot.exists() ? snapshot.data() as UserProfile : null);
+          setLoading(false);
+        }, (error) => {
+          console.error("Error subscribing to profile", error);
+          setLoading(false);
+        });
+      } catch (error) {
+        console.error("Error fetching profile", error);
+        setProfile(null);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      authRun += 1;
+      unsubscribeProfile?.();
+      unsubscribeAuth();
+    };
   }, []);
 
   const login = async () => {
     try {
       await signInWithGoogle();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed", error);
+      toast.error(`Login failed: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -104,12 +133,13 @@ export const useAuth = () => {
 interface StudyContextType {
   tasks: Task[];
   goals: Goal[];
-  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>, options?: { silent?: boolean }) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string | undefined>;
   updateGoal: (id: string, updates: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
+  clearStudyData: () => Promise<void>;
 }
 
 const StudyContext = createContext<StudyContextType | undefined>(undefined);
@@ -153,7 +183,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [user]);
 
   useEffect(() => {
-    if (!user || tasks.length === 0) return;
+    if (!user) return;
 
     const syncProfileStats = async () => {
       const completedTasks = tasks.filter(t => t.status === 'completed');
@@ -189,7 +219,7 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         totalStudyHours: Math.round(totalHours * 10) / 10,
         productivityScore: score,
         streak: streak,
-        lastActiveDate: new Date().toISOString(),
+        lastActiveDate: completedTasks.length > 0 ? new Date().toISOString() : null,
       };
 
       // Only update if changed (prevents infinite loop if subscription triggers this)
@@ -215,17 +245,47 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     syncProfileStats();
   }, [tasks, user, profile]);
 
-  const addTask = async (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
+  useEffect(() => {
+    if (!user || goals.length === 0) return;
+
+    const syncGoalProgress = async () => {
+      await Promise.all(goals.map(async (goal) => {
+        const goalTasks = tasks.filter(task => task.goalId === goal.id);
+        const completedCount = goalTasks.filter(task => task.status === 'completed').length;
+        const progress = goalTasks.length > 0 ? Math.round((completedCount / goalTasks.length) * 100) : 0;
+        const status: Goal['status'] = progress === 100 && goalTasks.length > 0 ? 'completed' : 'active';
+
+        if (goal.progress !== progress || goal.status !== status) {
+          try {
+            await updateDoc(doc(db, 'goals', goal.id), {
+              progress,
+              status,
+              updatedAt: serverTimestamp(),
+            });
+          } catch (error) {
+            console.error("Error syncing goal progress", error);
+          }
+        }
+      }));
+    };
+
+    syncGoalProgress();
+  }, [tasks, goals, user]);
+
+  const addTask = async (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>, options?: { silent?: boolean }) => {
     try {
       await addDoc(collection(db, 'tasks'), {
         ...task,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      toast.success('Task created successfully');
+      if (!options?.silent) {
+        toast.success('Task created successfully');
+      }
     } catch (error) {
       toast.error('Failed to create task');
       handleFirestoreError(error, OperationType.CREATE, 'tasks');
+      throw error;
     }
   };
 
@@ -287,16 +347,57 @@ export const StudyProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const deleteGoal = async (id: string) => {
     try {
+      const linkedTasks = tasks.filter(task => task.goalId === id);
+
+      await Promise.all(
+        linkedTasks.map(task => deleteDoc(doc(db, 'tasks', task.id)))
+      );
+
       await deleteDoc(doc(db, 'goals', id));
-      toast.success('Goal deleted');
+      toast.success(linkedTasks.length > 0 ? 'Goal and linked tasks deleted' : 'Goal deleted');
     } catch (error) {
       toast.error('Failed to delete goal');
       handleFirestoreError(error, OperationType.DELETE, `goals/${id}`);
     }
   };
 
+  const clearStudyData = async () => {
+    if (!user) return;
+
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      const resetStats = {
+        productivityScore: 0,
+        totalStudyHours: 0,
+        totalCompletedTasks: 0,
+        streak: 0,
+        lastActiveDate: null,
+        updatedAt: serverTimestamp(),
+      };
+
+      const writeRefs = [
+        ...tasks.map(task => doc(db, 'tasks', task.id)),
+        ...goals.map(goal => doc(db, 'goals', goal.id)),
+      ];
+
+      for (let i = 0; i < writeRefs.length; i += 450) {
+        const batch = writeBatch(db);
+        writeRefs.slice(i, i + 450).forEach(ref => batch.delete(ref));
+        await batch.commit();
+      }
+
+      setTasks([]);
+      setGoals([]);
+      await updateDoc(userRef, resetStats);
+      toast.success('Study data cleared');
+    } catch (error) {
+      toast.error('Failed to clear study data');
+      handleFirestoreError(error, OperationType.DELETE, 'study data');
+    }
+  };
+
   return (
-    <StudyContext.Provider value={{ tasks, goals, addTask, updateTask, deleteTask, addGoal, updateGoal, deleteGoal }}>
+    <StudyContext.Provider value={{ tasks, goals, addTask, updateTask, deleteTask, addGoal, updateGoal, deleteGoal, clearStudyData }}>
       {children}
     </StudyContext.Provider>
   );

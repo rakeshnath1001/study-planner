@@ -31,16 +31,16 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg z-50 p-6"
+            className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 p-3 sm:p-6"
           >
-            <div className="glass rounded-[32px] overflow-hidden bg-white/90 border-slate-200 shadow-2xl">
-              <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
-                <h3 className="text-xl font-bold tracking-tight text-slate-900">{title}</h3>
+            <div className="glass overflow-hidden rounded-2xl border-slate-200 bg-white/90 shadow-2xl sm:rounded-[32px]">
+              <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-slate-50/50 p-4 sm:p-6">
+                <h3 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">{title}</h3>
                 <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-xl transition-colors text-slate-500">
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="p-8 max-h-[80vh] overflow-y-auto">
+              <div className="max-h-[80vh] overflow-y-auto p-4 sm:p-8">
                 {children}
               </div>
             </div>

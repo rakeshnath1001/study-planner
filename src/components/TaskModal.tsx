@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { useAuth, useStudy } from '../lib/contexts';
 import { Modal, Button } from './ui/Base';
-import { toast } from 'react-hot-toast';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -51,10 +50,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, defaultDa
         date: newTask.date,
       });
       setNewTask({ title: '', category: '', priority: 'medium', duration: 30, date: format(new Date(), 'yyyy-MM-dd') });
-      toast.success('Task created successfully');
       onClose();
     } catch (error) {
-      toast.error('Failed to create task');
       console.error(error);
     } finally {
       setLoading(false);
@@ -74,7 +71,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, defaultDa
             onChange={e => setNewTask({ ...newTask, title: e.target.value })}
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Category</label>
             <input
@@ -88,19 +85,20 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, defaultDa
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Duration (min)</label>
             <input
               type="number"
+              min={1}
               className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20 transition-all text-slate-900"
               value={newTask.duration}
-              onChange={e => setNewTask({ ...newTask, duration: Number(e.target.value) })}
+              onChange={e => setNewTask({ ...newTask, duration: Math.max(1, Number(e.target.value)) })}
             />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Priority</label>
             <select
               className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/20 transition-all text-slate-900"
               value={newTask.priority}
-              onChange={e => setNewTask({ ...newTask, priority: e.target.value as any })}
+              onChange={e => setNewTask({ ...newTask, priority: e.target.value as 'low' | 'medium' | 'high' })}
             >
               <option value="low">Low</option>
               <option value="medium">Medium</option>

@@ -62,7 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setPage, isOpen, 
         <nav className="flex-1 space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = currentPage === item.id;
+            const isActive = currentPage === item.id || (currentPage === 'goal-detail' && item.id === 'activity');
 
             return (
               <button
@@ -119,7 +119,7 @@ export const Layout: React.FC<{ children: React.ReactNode; currentPage: string; 
   return (
     <div className="flex min-h-screen bg-[#F6F3EB] text-slate-800 overflow-hidden">
       <Sidebar currentPage={currentPage} setPage={setPage} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
-      <main className="flex-1 flex flex-col overflow-y-auto study-gradient w-full relative">
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-y-auto study-gradient">
         
         {/* Mobile Header */}
         <div className="md:hidden flex items-center justify-between p-4 border-b border-slate-200 bg-[#F6F3EB]/80 backdrop-blur-md sticky top-0 z-30">
@@ -134,7 +134,7 @@ export const Layout: React.FC<{ children: React.ReactNode; currentPage: string; 
           </button>
         </div>
 
-        <div className="flex-1 p-4 md:p-8 flex flex-col relative">
+        <div className="relative flex min-w-0 flex-1 flex-col p-4 md:p-8">
           {/* Decorative Top Right Gradient */}
           <div className="absolute top-0 right-0 w-[300px] h-[300px] md:w-[500px] md:h-[500px] bg-indigo-500/10 blur-[80px] md:blur-[120px] rounded-full -z-10 pointer-events-none" />
           <motion.div
@@ -142,7 +142,7 @@ export const Layout: React.FC<{ children: React.ReactNode; currentPage: string; 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="flex-1 flex flex-col"
+            className="flex min-w-0 flex-1 flex-col"
           >
             {children}
           </motion.div>
