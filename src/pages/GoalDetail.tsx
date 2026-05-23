@@ -164,37 +164,77 @@ export const GoalDetail: React.FC<GoalDetailProps> = ({ goalId, onBack }) => {
         </div>
 
         <div className="space-y-6 xl:space-y-8">
-          <div className="glass-card border border-slate-200 bg-white/60 p-6 shadow-sm sm:p-8 lg:p-10">
-            <h3 className="mb-6 text-sm font-bold uppercase tracking-[0.2em] text-slate-500">Current Evolution</h3>
-            <div className="relative flex aspect-square w-full items-center justify-center">
-              <svg className="h-full w-full -rotate-90">
-                <circle cx="50%" cy="50%" r="45%" className="fill-none stroke-slate-200" strokeWidth="8" />
-                <motion.circle
-                  cx="50%"
-                  cy="50%"
-                  r="45%"
-                  className="fill-none stroke-indigo-500"
-                  strokeWidth="8"
-                  strokeDasharray="282.6"
-                  initial={{ strokeDashoffset: 282.6 }}
-                  animate={{ strokeDashoffset: 282.6 - (282.6 * progress) / 100 }}
-                  transition={{ duration: 1.5, ease: 'easeOut' }}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-bold tracking-tight text-slate-900">{progress}%</span>
-                <span className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Complete</span>
+          <div className="glass-card relative overflow-hidden border border-slate-200/80 bg-gradient-to-br from-white to-slate-50 p-6 shadow-xl shadow-slate-200/40 sm:p-8 lg:p-10">
+            <div className="absolute -right-20 -top-20 -z-10 h-64 w-64 rounded-full bg-indigo-500/5 blur-[80px]" />
+            <div className="mb-10 flex items-center justify-between">
+              <h3 className="text-xs font-black uppercase tracking-[0.25em] text-slate-400">Current Evolution</h3>
+              <div className="flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/50 px-3 py-1 backdrop-blur-sm">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500"></span>
+                </span>
+                <span className="text-[9px] font-bold tracking-widest text-indigo-500">LIVE</span>
               </div>
             </div>
 
-            <div className="mt-8 space-y-4 lg:mt-10">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold uppercase tracking-wider text-slate-500">Task Completion</span>
-                <span className="font-bold text-emerald-500">{completedTasks.length}/{goalTasks.length}</span>
+            <div className="mt-8 flex flex-col items-center justify-center gap-8">
+              <div className="flex flex-col items-center gap-1">
+                <motion.span 
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.2, duration: 0.5 }}
+                  className="bg-gradient-to-br from-indigo-950 via-slate-800 to-slate-900 bg-clip-text text-6xl font-black tracking-tighter text-transparent drop-shadow-sm sm:text-7xl"
+                >
+                  {progress}%
+                </motion.span>
+                <span className="rounded-full border border-slate-100 bg-white/80 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 shadow-sm backdrop-blur-md">
+                  Complete
+                </span>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-                <div className="h-full rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" style={{ width: `${progress}%` }} />
+              
+              <div className="relative w-full rounded-2xl border border-slate-200/60 bg-white/60 p-2 shadow-inner backdrop-blur-sm">
+                <div className="relative h-8 w-full overflow-hidden rounded-xl bg-slate-100 shadow-inner">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 1.5, ease: 'easeOut', type: 'spring', bounce: 0.15 }}
+                    className="relative h-full rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500 shadow-[0_0_20px_rgba(139,92,246,0.4)]"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent" />
+                    {/* Add subtle stripes for a premium technical feel */}
+                    <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.15)_50%,transparent_75%,transparent_100%)] bg-[length:20px_20px] opacity-70" />
+                  </motion.div>
+                  
+                  {/* Tick Marks overlay */}
+                  <div className="absolute inset-0 flex justify-evenly pointer-events-none items-center">
+                    {[...Array(9)].map((_, i) => (
+                      <div key={i} className={`h-4 w-px rounded-full ${i < (progress / 10) - 1 ? 'bg-white/40' : 'bg-slate-300/50'}`} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-10 rounded-2xl border border-slate-100 bg-white/60 p-4 shadow-sm backdrop-blur-sm lg:mt-12">
+              <div className="mb-3 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-50 text-emerald-500">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="font-bold uppercase tracking-wider text-slate-500">Task Completion</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm font-black text-emerald-500">{completedTasks.length}</span>
+                  <span className="text-xs font-bold text-slate-400">/ {goalTasks.length}</span>
+                </div>
+              </div>
+              <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-slate-100 shadow-inner">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 1.5, ease: 'easeOut' }}
+                  className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]" 
+                />
               </div>
             </div>
           </div>
