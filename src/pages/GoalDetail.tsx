@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import {
   AlertCircle,
@@ -9,9 +9,13 @@ import {
   Clock,
   Target,
   TrendingUp,
+  Edit2,
 } from 'lucide-react';
 import { useStudy } from '../lib/contexts';
 import { Button } from '../components/ui/Base';
+import { TaskModal } from '../components/TaskModal';
+import { GoalModal } from '../components/GoalModal';
+import { Task, Goal } from '../types';
 
 interface GoalDetailProps {
   goalId: string;
@@ -20,6 +24,12 @@ interface GoalDetailProps {
 
 export const GoalDetail: React.FC<GoalDetailProps> = ({ goalId, onBack }) => {
   const { goals, tasks, updateTask } = useStudy();
+
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [goalToEdit, setGoalToEdit] = useState<Goal | null>(null);
 
   const goal = goals.find(item => item.id === goalId);
   const goalTasks = tasks
@@ -59,7 +69,19 @@ export const GoalDetail: React.FC<GoalDetailProps> = ({ goalId, onBack }) => {
                 <Target className="h-10 w-10" />
               </div>
               <div className="min-w-0 flex-1 space-y-2">
-                <h1 className="break-words text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{goal.title}</h1>
+                <div className="flex items-center justify-between gap-4">
+                  <h1 className="break-words text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{goal.title}</h1>
+                  <button
+                    onClick={() => {
+                      setGoalToEdit(goal);
+                      setIsGoalModalOpen(true);
+                    }}
+                    className="shrink-0 rounded-xl bg-blue-50 p-2 text-blue-500 shadow-sm transition-all hover:bg-blue-500 hover:text-white"
+                    aria-label="Edit Goal"
+                  >
+                    <Edit2 className="h-5 w-5" />
+                  </button>
+                </div>
                 <p className="leading-relaxed text-slate-600">{goal.description || 'No description provided.'}</p>
               </div>
             </div>
@@ -122,6 +144,16 @@ export const GoalDetail: React.FC<GoalDetailProps> = ({ goalId, onBack }) => {
                         </span>
                       </div>
                     </div>
+                    <button
+                      onClick={() => {
+                        setTaskToEdit(task);
+                        setIsTaskModalOpen(true);
+                      }}
+                      className="ml-auto rounded-lg bg-blue-50 p-2 text-blue-500 shadow-sm opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-500 hover:text-white"
+                      aria-label="Edit Task"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </button>
                   </motion.div>
                 ))
               ) : (
@@ -175,6 +207,18 @@ export const GoalDetail: React.FC<GoalDetailProps> = ({ goalId, onBack }) => {
           </div>
         </div>
       </div>
+
+      <TaskModal 
+        isOpen={isTaskModalOpen} 
+        onClose={() => setIsTaskModalOpen(false)} 
+        taskToEdit={taskToEdit}
+      />
+
+      <GoalModal
+        isOpen={isGoalModalOpen}
+        onClose={() => setIsGoalModalOpen(false)}
+        goalToEdit={goalToEdit}
+      />
     </div>
   );
 };

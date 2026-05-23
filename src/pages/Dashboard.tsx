@@ -8,10 +8,13 @@ import {
   Flame,
   Plus,
   TrendingUp,
+  Edit2,
 } from 'lucide-react';
 import { eachDayOfInterval, endOfMonth, format, isSameDay, startOfMonth, subDays } from 'date-fns';
 import { useAuth, useStudy } from '../lib/contexts';
 import { Button } from '../components/ui/Base';
+import { TaskModal } from '../components/TaskModal';
+import { Task } from '../types';
 
 interface DashboardProps {
   onAddTask: () => void;
@@ -22,6 +25,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onAddTask, onViewActivity 
   const { profile } = useAuth();
   const { tasks, updateTask } = useStudy();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const todayTasks = tasks.filter(task => isSameDay(new Date(task.date), new Date()));
@@ -150,9 +155,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onAddTask, onViewActivity 
                       <h3 className={`truncate text-sm font-bold ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{task.title}</h3>
                       <p className="text-xs text-slate-500">{task.category || 'Focus Session'} - {task.duration} mins</p>
                     </div>
-                    <span className={`self-start rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-tight sm:self-auto ${task.priority === 'high' ? 'bg-red-50 text-red-500' : 'bg-slate-100 text-slate-500'}`}>
-                      {task.priority} Priority
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setTaskToEdit(task);
+                          setIsTaskModalOpen(true);
+                        }}
+                        className="rounded-lg bg-blue-50 p-1.5 text-blue-500 shadow-sm opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all hover:bg-blue-500 hover:text-white"
+                        aria-label="Edit Task"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <span className={`self-start rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-tight sm:self-auto ${task.priority === 'high' ? 'bg-red-50 text-red-500' : 'bg-slate-100 text-slate-500'}`}>
+                        {task.priority} Priority
+                      </span>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -215,6 +232,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onAddTask, onViewActivity 
           </div>
         </div>
       </div>
+
+      <TaskModal 
+        isOpen={isTaskModalOpen} 
+        onClose={() => setIsTaskModalOpen(false)} 
+        taskToEdit={taskToEdit}
+      />
     </div>
   );
 };

@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { useAuth, useStudy } from '../lib/contexts';
 import { Modal, Button } from './ui/Base';
+import { Task } from '../types';
 
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultDate?: Date;
+  taskToEdit?: Task | null;
 }
 
-export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, defaultDate }) => {
+export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, defaultDate, taskToEdit }) => {
   const { user } = useAuth();
-  const { addTask } = useStudy();
+  const { addTask, updateTask } = useStudy();
   const [loading, setLoading] = useState(false);
 
   const [newTask, setNewTask] = useState({
@@ -24,15 +26,25 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, defaultDa
 
   React.useEffect(() => {
     if (isOpen) {
-      setNewTask({
-        title: '',
-        category: '',
-        priority: 'medium',
-        duration: 30,
-        date: format(defaultDate || new Date(), 'yyyy-MM-dd')
-      });
+      if (taskToEdit) {
+        setNewTask({
+          title: taskToEdit.title,
+          category: taskToEdit.category || '',
+          priority: taskToEdit.priority,
+          duration: taskToEdit.duration,
+          date: taskToEdit.date
+        });
+      } else {
+        setNewTask({
+          title: '',
+          category: '',
+          priority: 'medium',
+          duration: 30,
+          date: format(defaultDate || new Date(), 'yyyy-MM-dd')
+        });
+      }
     }
-  }, [isOpen, defaultDate]);
+  }, [isOpen, defaultDate, taskToEdit]);
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,15 +52,25 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, defaultDa
     setLoading(true);
     
     try {
-      await addTask({
-        userId: user.uid,
-        title: newTask.title,
-        category: newTask.category,
-        priority: newTask.priority,
-        duration: newTask.duration,
-        status: 'pending',
-        date: newTask.date,
-      });
+      if (taskToEdit) {
+        await updateTask(taskToEdit.id, {
+          title: newTask.title,
+          category: newTask.category,
+          priority: newTask.priority,
+          duration: newTask.duration,
+          date: newTask.date,
+        });
+      } else {
+        await addTask({
+          userId: user.uid,
+          title: newTask.title,
+          category: newTask.category,
+          priority: newTask.priority,
+          duration: newTask.duration,
+          status: 'pending',
+          date: newTask.date,
+        });
+      }
       setNewTask({ title: '', category: '', priority: 'medium', duration: 30, date: format(new Date(), 'yyyy-MM-dd') });
       onClose();
     } catch (error) {
@@ -59,7 +81,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, defaultDa
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Create New Task">
+    <Modal isOpen={isOpen} onClose={onClose} title={taskToEdit ? "Edit Task" : "Create New Task"}>
       <form onSubmit={handleAddTask} className="space-y-4">
         <div>
           <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Task Title</label>
@@ -116,7 +138,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, defaultDa
           </div>
         </div>
         <Button variant="neubrutal" className="w-full mt-4" disabled={loading}>
-          {loading ? 'Adding...' : 'Add Study Task'}
+          {loading ? 'Saving...' : taskToEdit ? 'Save Changes' : 'Add Study Task'}
         </Button>
       </form>
     </Modal>

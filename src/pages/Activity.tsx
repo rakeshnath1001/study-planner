@@ -11,14 +11,37 @@ import {
   Target,
   Trash2,
   Wand2,
+  Edit2,
 } from 'lucide-react';
 import { addDays, format, isSameDay } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { useAuth, useStudy } from '../lib/contexts';
 import { Button, Modal } from '../components/ui/Base';
 import { TaskModal } from '../components/TaskModal';
+import { GoalModal } from '../components/GoalModal';
+import { Task, Goal } from '../types';
 
 type PriorityFilter = 'all' | 'high' | 'medium' | 'low';
+
+const createFallbackStudyPlan = (startDate: string, endDate: string) => {
+  const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+  const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+  
+  // Create dates in local timezone to avoid date shifting issues
+  const start = new Date(startYear, startMonth - 1, startDay);
+  const end = new Date(endYear, endMonth - 1, endDay);
+  const plan: Array<{ date: string; title: string; duration: number }> = [];
+
+  for (let current = new Date(start.getTime()); current <= end; current.setDate(current.getDate() + 1)) {
+    plan.push({
+      date: format(current, 'yyyy-MM-dd'),
+      title: `Day ${plan.length + 1}`,
+      duration: 30,
+    });
+  }
+
+  return plan;
+};
 
 export const Activity: React.FC<{ onGoalClick?: (id: string) => void }> = ({ onGoalClick }) => {
   const { user } = useAuth();
@@ -28,93 +51,14 @@ export const Activity: React.FC<{ onGoalClick?: (id: string) => void }> = ({ onG
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const [newGoal, setNewGoal] = useState({
-    title: '',
-    description: '',
-    startDate: format(new Date(), 'yyyy-MM-dd'),
-    endDate: format(addDays(new Date(), 7), 'yyyy-MM-dd'),
-    generateTasks: true,
-  });
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  const [goalToEdit, setGoalToEdit] = useState<Goal | null>(null);
 
   const priorityFilters: PriorityFilter[] = ['all', 'high', 'medium', 'low'];
   const priorityLabel = priorityFilter === 'all' ? 'All' : priorityFilter;
   const cyclePriorityFilter = () => {
     const currentIndex = priorityFilters.indexOf(priorityFilter);
     setPriorityFilter(priorityFilters[(currentIndex + 1) % priorityFilters.length]);
-  };
-
-  const handleAddGoal = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!user) return;
-    setLoading(true);
-
-    try {
-      let generatedPlan: Array<{ date: string; title: string; duration: number }> = [];
-
-      if (newGoal.generateTasks) {
-        const response = await fetch('/api/ai/generate-plan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            goal: newGoal.title,
-            startDate: newGoal.startDate,
-            endDate: newGoal.endDate,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Unable to generate study plan');
-        }
-
-        const plan = await response.json();
-        if (!Array.isArray(plan)) {
-          throw new Error('Generated study plan was not valid');
-        }
-
-        generatedPlan = plan;
-      }
-
-      const goalId = await addGoal({
-        userId: user.uid,
-        title: newGoal.title,
-        description: newGoal.description,
-        startDate: newGoal.startDate,
-        endDate: newGoal.endDate,
-        status: 'active',
-        progress: 0,
-      });
-
-      if (goalId && generatedPlan.length > 0) {
-        for (const item of generatedPlan) {
-          await addTask({
-            userId: user.uid,
-            goalId,
-            title: item.title,
-            category: 'AI Planned',
-            priority: 'medium',
-            duration: Number(item.duration) || 30,
-            status: 'pending',
-            date: item.date,
-          }, { silent: true });
-        }
-      }
-
-      setNewGoal({
-        title: '',
-        description: '',
-        startDate: format(new Date(), 'yyyy-MM-dd'),
-        endDate: format(addDays(new Date(), 7), 'yyyy-MM-dd'),
-        generateTasks: true,
-      });
-      setIsGoalModalOpen(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to launch goal');
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const todayTasks = tasks
@@ -170,7 +114,15 @@ export const Activity: React.FC<{ onGoalClick?: (id: string) => void }> = ({ onG
           )}
           <Button
             variant="neubrutal"
-            onClick={() => activeTab === 'daily' ? setIsTaskModalOpen(true) : setIsGoalModalOpen(true)}
+            onClick={() => {
+              if (activeTab === 'daily') {
+                setTaskToEdit(null);
+                setIsTaskModalOpen(true);
+              } else {
+                setGoalToEdit(null);
+                setIsGoalModalOpen(true);
+              }
+            }}
             className="flex-1 justify-center gap-2 py-2 text-sm md:flex-none"
           >
             <Plus className="h-5 w-5" />
@@ -218,13 +170,25 @@ export const Activity: React.FC<{ onGoalClick?: (id: string) => void }> = ({ onG
                   </div>
                 </div>
 
-                <button
-                  onClick={() => deleteTask(task.id)}
-                  className="absolute right-2 top-2 rounded-lg bg-red-50 p-1.5 text-red-500 opacity-100 shadow-sm transition-all hover:scale-110 hover:bg-red-500 hover:text-white sm:opacity-0 sm:group-hover:opacity-100"
-                  aria-label="Delete task"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="absolute right-2 top-2 flex flex-col gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all">
+                  <button
+                    onClick={() => {
+                      setTaskToEdit(task);
+                      setIsTaskModalOpen(true);
+                    }}
+                    className="rounded-lg bg-blue-50 p-1.5 text-blue-500 shadow-sm transition-all hover:scale-110 hover:bg-blue-500 hover:text-white"
+                    aria-label="Edit task"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => deleteTask(task.id)}
+                    className="rounded-lg bg-red-50 p-1.5 text-red-500 shadow-sm transition-all hover:scale-110 hover:bg-red-500 hover:text-white"
+                    aria-label="Delete task"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
             {todayTasks.length === 0 && (
@@ -272,16 +236,29 @@ export const Activity: React.FC<{ onGoalClick?: (id: string) => void }> = ({ onG
                           </div>
                         </div>
                       </div>
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          deleteGoal(goal.id);
-                        }}
-                        className="self-start rounded-2xl border border-slate-200 bg-white p-3 text-slate-400 shadow-sm transition-all hover:border-red-100 hover:bg-red-50 hover:text-red-500"
-                        aria-label="Delete goal"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setGoalToEdit(goal);
+                            setIsGoalModalOpen(true);
+                          }}
+                          className="self-start rounded-2xl border border-slate-200 bg-white p-3 text-slate-400 shadow-sm transition-all hover:border-blue-100 hover:bg-blue-50 hover:text-blue-500"
+                          aria-label="Edit goal"
+                        >
+                          <Edit2 className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            deleteGoal(goal.id);
+                          }}
+                          className="self-start rounded-2xl border border-slate-200 bg-white p-3 text-slate-400 shadow-sm transition-all hover:border-red-100 hover:bg-red-50 hover:text-red-500"
+                          aria-label="Delete goal"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </div>
                     </div>
                     <p className="max-w-2xl text-sm leading-relaxed text-slate-600">{goal.description || 'Focus on your long-term evolution.'}</p>
                   </div>
@@ -311,71 +288,17 @@ export const Activity: React.FC<{ onGoalClick?: (id: string) => void }> = ({ onG
         )}
       </AnimatePresence>
 
-      <TaskModal isOpen={isTaskModalOpen} onClose={() => setIsTaskModalOpen(false)} />
+      <TaskModal 
+        isOpen={isTaskModalOpen} 
+        onClose={() => setIsTaskModalOpen(false)} 
+        taskToEdit={taskToEdit}
+      />
 
-      <Modal isOpen={isGoalModalOpen} onClose={() => setIsGoalModalOpen(false)} title="Set Long-Term Goal">
-        <form onSubmit={handleAddGoal} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Goal Title</label>
-            <input
-              required
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-slate-900 outline-none transition-all focus:border-brand-indigo focus:ring-2 focus:ring-brand-indigo/20"
-              placeholder="e.g. Master React Advanced Patterns"
-              value={newGoal.title}
-              onChange={event => setNewGoal({ ...newGoal, title: event.target.value })}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Description</label>
-            <textarea
-              className="min-h-[100px] w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-slate-900 outline-none transition-all focus:border-brand-indigo focus:ring-2 focus:ring-brand-indigo/20"
-              placeholder="What do you want to achieve?"
-              value={newGoal.description}
-              onChange={event => setNewGoal({ ...newGoal, description: event.target.value })}
-            />
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Start Date</label>
-              <input
-                type="date"
-                required
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-slate-900 outline-none transition-all focus:border-brand-indigo focus:ring-2 focus:ring-brand-indigo/20"
-                value={newGoal.startDate}
-                onChange={event => setNewGoal({ ...newGoal, startDate: event.target.value })}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">End Date</label>
-              <input
-                type="date"
-                required
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-slate-900 outline-none transition-all focus:border-brand-indigo focus:ring-2 focus:ring-brand-indigo/20"
-                value={newGoal.endDate}
-                onChange={event => setNewGoal({ ...newGoal, endDate: event.target.value })}
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-3 rounded-xl border border-brand-indigo/20 bg-brand-indigo/5 p-4">
-            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${newGoal.generateTasks ? 'bg-brand-indigo text-white' : 'bg-slate-200 text-slate-500'}`}>
-              <Wand2 className="h-6 w-6" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-slate-900">Auto-generate Tasks</p>
-              <p className="text-[10px] text-slate-500">Gemini AI will create a daily study schedule for you.</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={newGoal.generateTasks}
-              onChange={event => setNewGoal({ ...newGoal, generateTasks: event.target.checked })}
-              className="h-5 w-5 accent-brand-indigo"
-            />
-          </div>
-          <Button variant="neubrutal" className="mt-4 w-full" disabled={loading}>
-            {loading ? 'Generating Schedule...' : 'Launch Goal'}
-          </Button>
-        </form>
-      </Modal>
+      <GoalModal
+        isOpen={isGoalModalOpen}
+        onClose={() => setIsGoalModalOpen(false)}
+        goalToEdit={goalToEdit}
+      />
     </div>
   );
 };
